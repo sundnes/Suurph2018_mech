@@ -6,7 +6,7 @@ from fenics import *
 parameters["form_compiler"]["cpp_optimize"] = True
 parameters["form_compiler"]["representation"] = "uflacs"
 parameters["form_compiler"]["quadrature_degree"] = 4
-#parameters["allow_extrapolation"] = True
+parameters["allow_extrapolation"] = True
 
 
 L = 10
@@ -18,7 +18,7 @@ V = VectorFunctionSpace(mesh, "Lagrange", 2)
 
 # Mark boundary subdomians
 left =  CompiledSubDomain("near(x[0], side) && on_boundary", side = 0)
-bottom = CompiledSubDomain("near(x[0], side) && on_boundary", side = L)
+bottom = CompiledSubDomain("near(x[2], side) && on_boundary", side = 0)
 
 boundary_markers = MeshFunction("size_t", mesh,mesh.topology().dim() - 1)
 boundary_markers.set_all(0)
@@ -34,30 +34,42 @@ bc = DirichletBC(V, clamp, left)
 bcs = [bc]
 
 # Define functions
-du = TrialFunction(V)            # Incremental displacement
+#du = TrialFunction(V)            # Incremental displacement
 v  = TestFunction(V)             # Test function
 u  = Function(V)                 # Displacement from previous iteration
-T  = Constant((0.0,  0.0, 0.001))  # Traction force on the boundary
 
 # Kinematics
 d = len(u)
 I = Identity(d)             # Identity tensor
 F = I + grad(u)             # Deformation gradient
+
+#Compressible neo-Hookean - parameters and strain energy:
+mu, lmbda = Constant(6.0), Constant(4.0)
 F = variable(F)
+C = F.T*F
+Ic = tr(C)
+J  = det(F)
 
-J = det(F)
-C = pow(J, -float(2)/3) * F.T*F
-E = 0.5*(C - I)
+psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
 
+"""
+#Guccione material - parameters and strain energy:
+CC = Constant(2.0)
+kappa = Constant(1.0e2)
 b_f = Constant(8)
 b_t = Constant(2)
 b_fs = Constant(4)
+
+#define the strain energy function
+F = variable(F)
+J = det(F)
+C = pow(J, -float(2)/3) * F.T*F
+E = 0.5*(C - I)
 Q = b_f*E[0,0]**2 + b_t*(E[1,1]**2+E[2,2]**2+E[1,2]**2+E[2,1]**2) \
                   + b_fs*(E[0,1]**2+E[1,0]**2+E[0,2]**2+E[2,0]**2)
 
-CC = Constant(2.0)
-kappa = Constant(1.0e3)
 psi = (CC/2)*(exp(Q -1)) + kappa * (J*ln(J) -J +1) 
+"""
 
 #first Piola-Kirchoff stress
 P = diff(psi,F)
