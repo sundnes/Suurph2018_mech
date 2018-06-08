@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 from dolfin import *
 
-def load_ellipsoid_mesh_markers_numbering():
-    """Returns triple of Mesh, MeshFunction and dict of marking numbers.
+def load_ellipsoid_data():
+    """Returns 4-tuple Mesh, MeshFunction, dict of marking numbers and dict of fiber functions.
     The MeshFunction numbers domains according to the numbering dict."""
     comm = mpi_comm_world()
     hdf5file = dolfin.HDF5File(dolfin.mpi_comm_world(), "simple_ellipsoid.h5", "r")
@@ -27,14 +27,43 @@ def load_ellipsoid_mesh_markers_numbering():
         "EPI": 40
     }
 
-    return mesh, mf, numbering
+
+    # load fibers
+
+    try:
+        family, order = hdf5file.attributes("/microstructure")["space"].split("_")
+        order = int(order)
+    except:
+        family, order = "Quadrature", 4
+    elm = dolfin.VectorElement(family=family,
+                                       cell=mesh.ufl_cell(),
+                                       degree=int(order),
+                                       quad_scheme="default")
+    V = dolfin.FunctionSpace(mesh, elm)
+    
+    fibers = {}
+    fiber_names = hdf5file.attributes("/microstructure")["names"].split(":")
+    for name in fiber_names:
+        fiberfunc = Function(V, name=name)
+        hdf5file.read(fiberfunc, "/microstructure/{}".format(name))
+        fibers[name] = fiberfunc
+
+    # should contain:
+    # 'cross_sheet_fepi-60_fendo60_sepi0_sendo0',
+    # 'fiber_epi-60_endo60',
+    # 'sheet_epi0_endo0'
+    
+
+    return mesh, mf, numbering, fibers
                  
+
+
 
 # Adjust log level
 set_log_level(PROGRESS)
 parameters["form_compiler"]["cpp_optimize"] = True
 
-mesh, boundary_markers, numbering = load_ellipsoid_mesh_markers_numbering()
+mesh, boundary_markers, numbering, fibers = load_ellipsoid_data()
 
 V = VectorFunctionSpace(mesh,'P',1)
 
