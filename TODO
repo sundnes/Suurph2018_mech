@@ -1,0 +1,18 @@
+Benchmark 1:
+Works ok with neoHookean material, diverges with Guccione.
+- Can this be fixed with different nonlinear solver settings?
+- If not, should we try a fully incompressible (mixed) formulation?
+
+Benchmark 2:
+1. We need to mark two parts of the boundary:
+- The base should have homogeneuos Dirichlet conditions. The endocardium should have a time-varying pressure
+- Are these boundary parts marked as subdomains in the files benchmark.h5 or simple_ellipsoid.h5?
+
+2. Need to change the material type to Guccione, using either Henrik's material class or something simpler
+
+3. Need to extract the microstructure from the hf files (see pulse demos)
+
+
+Benchmark 3:
+- Add simple contraction to benchmark 2
+
