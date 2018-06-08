@@ -34,7 +34,7 @@ bc = DirichletBC(V, clamp, left)
 bcs = [bc]
 
 # Define functions
-#du = TrialFunction(V)            # Incremental displacement
+du = TrialFunction(V)            # Incremental displacement
 v  = TestFunction(V)             # Test function
 u  = Function(V)                 # Displacement from previous iteration
 
@@ -43,19 +43,9 @@ d = len(u)
 I = Identity(d)             # Identity tensor
 F = I + grad(u)             # Deformation gradient
 
-#Compressible neo-Hookean - parameters and strain energy:
-mu, lmbda = Constant(6.0), Constant(4.0)
-F = variable(F)
-C = F.T*F
-Ic = tr(C)
-J  = det(F)
-
-psi = (mu/2)*(Ic - 3) - mu*ln(J) + (lmbda/2)*(ln(J))**2
-
-"""
 #Guccione material - parameters and strain energy:
 CC = Constant(2.0)
-kappa = Constant(1.0e2)
+kappa = Constant(1.0e3)
 b_f = Constant(8)
 b_t = Constant(2)
 b_fs = Constant(4)
@@ -68,18 +58,37 @@ E = 0.5*(C - I)
 Q = b_f*E[0,0]**2 + b_t*(E[1,1]**2+E[2,2]**2+E[1,2]**2+E[2,1]**2) \
                   + b_fs*(E[0,1]**2+E[1,0]**2+E[0,2]**2+E[2,0]**2)
 
-psi = (CC/2)*(exp(Q -1)) + kappa * (J*ln(J) -J +1) 
-"""
+psi = 0.5*CC*(exp(Q -1))
+psi_vol = kappa * (J*ln(J)-J +1) 
+
 
 #first Piola-Kirchoff stress
-P = diff(psi,F)
+P = diff(psi,F) + diff(psi_vol,F) #ln(J)*J*inv(F.T*F)
+#S = diff(psi,F)
+#P = F*S
 
-p_bottom = Constant(0.004) 
+
+p_bottom = Constant(0.0) 
 N = FacetNormal(mesh)
 Gext = p_bottom * inner(v, cofac(F)*N) * ds(2) 
 R = inner(P,grad(v))*dx + Gext 
+J = derivative(R,u,du)
 
-solve(R == 0, u, bcs)
+
+problem = NonlinearVariationalProblem(R, u, bcs, J)
+solver  = NonlinearVariationalSolver(problem)
+
+
+
+#solve(R == 0, u, bcs)
+
+steps = 100
+p_target = 4.0e-3
+
+for i in range(1,steps+1):
+    p_bottom.assign(p_target*float(i)/steps)
+    solver.solve()
+
 
 #set_log_level(PROGRESS)
 
@@ -92,6 +101,7 @@ print d0
 # Save solution in VTK format
 file = File("displacement.pvd");
 file << u;
+
 
 
 

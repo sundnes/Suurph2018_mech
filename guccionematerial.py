@@ -81,7 +81,7 @@ class GuccioneMaterial(object) :
         # incompressibility
         if params['kappa'] is not None :
             kappa = Constant(params['kappa'], name='kappa')
-            Winc = kappa * (J*ln(J) -J +1) #(J**2 - 1 - 2*ln(J))
+            Winc = kappa * (J*ln(J) -J +1) 
         else :
             Winc = - p * (J - 1)
         

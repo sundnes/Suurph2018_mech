@@ -29,7 +29,6 @@ right.mark(boundary_markers, 2)
 # Redefine boundary measure
 ds = Measure('ds',domain=mesh,subdomain_data=boundary_markers)
 
-#print ds(2)
 
 # Define Dirichlet boundary (x = 0 or x = 1)
 clamp = Constant((0.0, 0.0, 0.0))
@@ -40,7 +39,6 @@ bcs = [bc]
 du = TrialFunction(V)            # Incremental displacement
 v  = TestFunction(V)             # Test function
 u  = Function(V)                 # Displacement from previous iteration
-T  = Constant((0.0,  0.0, 0.001))  # Traction force on the boundary
 
 
 f0 = as_vector([ 1.0, 0.0, 0.0 ])
@@ -62,7 +60,7 @@ psi = material.strain_energy(F)
 #first Piola-Kirchoff stress
 P = diff(psi,F)
 
-p_right = Constant(-1.0)
+p_right = Constant(0.0)
 
 N = FacetNormal(mesh)
 Gext = p_right * inner(v, cofac(F)*N) * ds(2) #_bottom
@@ -70,12 +68,14 @@ R = inner(P,grad(v))*dx + Gext #dot(T,v)*ds(2)
 #J = derivative(R,u,du)
 
 set_log_level(PROGRESS)
-solve(R == 0, u, bcs)
 
-
-# Save solution in VTK format
 file = File("displacement.pvd");
-file << u;
+
+for T_a in np.linspace(0,1.0,10):
+    material.set_active_stress(T_a)
+    solve(R == 0, u, bcs)
+    # Save solution in VTK format
+    file << u;
 
 #displacement of point (1,0.5,0.5)
 point0 = np.array([10.0,0.5,0.5])
