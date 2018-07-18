@@ -48,6 +48,10 @@ def load_ellipsoid_data():
         hdf5file.read(fiberfunc, "/microstructure/{}".format(name))
         fibers[name] = fiberfunc
 
+
+    for name in fibers:
+        File(name+'.xml') << fibers[name]
+        #fibers[name] >> filename
     # should contain:
     # 'cross_sheet_fepi-60_fendo60_sepi0_sendo0',
     # 'fiber_epi-60_endo60',
